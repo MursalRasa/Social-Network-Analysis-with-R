@@ -1,0 +1,284 @@
+
+```{r}
+advice<- read.csv("Law_Advice.csv", header = TRUE, as.is = TRUE)
+print(advice)
+
+friendship<- read.csv("Law_Friendship.csv", header = TRUE, as.is = TRUE)
+print(friendship)
+
+cowork<- read.csv("Law_CoWork.csv", header = TRUE, as.is = TRUE)
+print(cowork)
+
+nodes<- read.csv("Law_NodeAtt.csv", header = TRUE, as.is = TRUE)
+print(nodes)
+
+plot(advice)
+plot(advice, vertex.label=NA, edge.arrow.size=0.25, vertex.size=3, edge.width=0.5)
+
+
+
+plot(friendship)
+plot(friendship, vertex.label=NA, edge.arrow.size=0.25, vertex.size=3, edge.width=0.5)
+
+
+
+plot(cowork)
+plot(cowork, vertex.label=NA, edge.arrow.size=0.25, vertex.size=3, edge.width=0.5)
+```
+
+
+
+
+
+
+1.	Calculate the density and average degree for each of the three networks. Report these and use them to compare the three networks: what are we learning about the social relationships between coworkers from these network summary statistics? [2 points]
+
+```{r}
+require(ergm)
+require(intergraph) 
+detach(package:ergm) 
+detach(package:network)
+require(igraph)
+
+summary(advice)
+advice <- asIgraph(advice)
+graph.density(advice)
+
+deg_advice <- degree(advice)
+head(deg_advice)
+
+
+summary(friendship)
+friendship<- asIgraph(friendship)
+graph.density(friendship)
+
+deg_friendship <- degree(friendship)
+head(deg_friendship)
+
+
+
+
+
+summary(cowork)
+cowork<- asIgraph(cowork)
+graph.density(cowork)
+
+deg_cowork <- degree(cowork)
+head(deg_cowork)
+
+
+```
+
+
+
+
+
+
+2.	Calculate in-degree, out-degree, betweenness, closeness, eigenvector, and PageRank centrality for each of the three networks. [1 point]
+
+```{r}
+i_deg_advice <- degree(advice, mode="in")
+summary(i_deg_advice)
+hist(i_deg_advice,breaks=20)
+
+
+o_deg_advice <- degree(advice, mode="out")
+summary(o_deg_advice)
+hist(o_deg_advice, breaks=20)
+
+eig_advice <- evcent(advice)$vector
+summary(eig_advice)
+hist(eig_advice, breaks=20)
+
+
+pr_advice <- page.rank(advice)$vector
+summary(pr_advice)
+hist(pr_advice, breaks=20)
+
+clo_advice <- closeness(advice)
+summary(clo_advice)
+clo_advice[is.na(clo_advice)] <- 0
+summary(clo_advice)
+hist(clo_advice, breaks=20)
+
+bet_advice <- betweenness(advice)
+summary(bet_advice)
+hist(bet_advice, breaks=20)
+
+
+i_deg_friendship <- degree(friendship, mode="in")
+summary(i_deg_friendship)
+hist(i_deg_friendship,breaks=20)
+
+
+o_deg_friendship <- degree(friendship, mode="out")
+summary(o_deg_friendship)
+hist(o_deg_friendship, breaks=20)
+
+eig_friendship <- evcent(friendship)$vector
+summary(eig_friendship)
+hist(eig_friendship, breaks=20)
+
+
+pr_friendship <- page.rank(friendship)$vector
+summary(pr_friendship)
+hist(pr_friendship, breaks=20)
+
+clo_friendship <- closeness(friendship)
+summary(clo_friendship)
+clo_friendship[is.na(clo_friendship)] <- 0
+summary(clo_friendship)
+hist(clo_friendship, breaks=20)
+
+bet_friendship <- betweenness(friendship)
+summary(bet_friendship)
+hist(bet_friendship, breaks=20)
+
+
+
+i_deg_cowork <- degree(cowork, mode="in")
+summary(i_deg_cowork)
+hist(i_deg_cowork,breaks=20)
+
+
+o_deg_cowork <- degree(cowork, mode="out")
+summary(o_deg_cowork)
+hist(o_deg_cowork, breaks=20)
+
+eig_cowork <- evcent(cowork)$vector
+summary(eig_cowork)
+hist(eig_cowork, breaks=20)
+
+
+pr_cowork <- page.rank(cowork)$vector
+summary(pr_cowork)
+hist(pr_cowork, breaks=20)
+
+clo_cowork <- closeness(cowork)
+summary(clo_cowork)
+clo_cowork[is.na(clo_cowork)] <- 0
+summary(clo_cowork)
+hist(clo_cowork, breaks=20)
+
+bet_cowork <- betweenness(cowork)
+summary(bet_cowork)
+hist(bet_cowork, breaks=20)
+```
+
+
+
+
+
+
+3.	Plot each of the three networks once, sizing nodes by one of the centrality measures used above (i.e., in-degree, out-degree, betweenness, closeness, eigenvector, or PageRank centrality). Base your choice on which centrality measure to use for each network on the basis of what you think it reveals about that type of relationship in particular. [2 points]
+
+```{r}
+cents_advice <- data.frame(deg_advice, i_deg_advice, o_deg_advice, bet_advice, clo_advice, eig_advice, pr_advice)
+cor(cents_advice, method = "spearman")
+
+cents_friendship <- data.frame(deg_friendship, i_deg_friendship, o_deg_friendship, bet_friendship, clo_friendship, eig_friendship, pr_friendship)
+cor(cents_friendship, method = "spearman")
+
+
+
+cents_cowork <- data.frame(deg_cowork, i_deg_cowork, o_deg_cowork, bet_cowork, clo_cowork, eig_cowork, pr_cowork)
+cor(cents_cowork, method = "spearman")
+
+
+dlayout <- layout_with_fr(advice)
+library(scales)
+
+summary(bet_advice)
+
+
+V(advice)$Gender<- nodes[V(advice)== nodes$ID, c("Gender")]
+V(friendship)$Gender<- nodes[V(friendship)== nodes$ID, c("Gender")]
+V(cowork)$Gender<- nodes[V(cowork)== nodes$ID, c("Gender")]
+
+
+plot(advice, vertex.color=V(advice)$Gender, vertex.size=rescale(bet_advice, c(1,25)), edge.arrow.size=0.25, edge.width=0.5, vertex.label=NA, layout=dlayout)
+legend("topright", legend=1:2, pch=19, col=categorical_pal(2)[c(1,2)])
+
+
+
+clo_friendship[clo_friendship==0.5] <- 0
+
+plot(friendship, vertex.color=V(friendship)$Gender, vertex.size=rescale(clo_friendship, c(1,15)), edge.arrow.size=0.25, edge.width=0.5, vertex.label=NA, layout=dlayout)
+legend("topright", legend=1:2, pch=19, col=categorical_pal(2)[c(1,2)])
+
+
+plot(cowork, vertex.color=V(cowork)$Gender, vertex.size=rescale(pr_cowork, c(1,20)), edge.arrow.size=0.25, edge.width=0.5, vertex.label= NA, layout=dlayout)
+legend("topright", legend=1:2, pch=19, col=categorical_pal(2)[c(1,2)])
+
+
+```
+
+
+4.	Justify your decision to highlight the particular centrality measure for each particular network. In your justification, present clear interpretations of what each centrality measure is capturing about the position of nodes in that particular network. [3 points]
+
+Advice: Betweenness Centrality
+Betweenness centrality indicates that a node is well-connected within the cluster that it belongs to as well as the rest of the nodes that belong to the other clusters within the network.Therefore, a node with higher Betweenness centrality has a greater influence over the flow of information throughout the network. To make an effective decision we need advice from someone who is well aware of the situation and has enough information. Measuring Betweenness centrality can help to identify what can offer better advice based on the connection they have with other groups and the information they have. 
+
+
+Friendship: Closeness Centrality
+“Closeness centrality measures how far a node is from all other nodes”. In friendship accessibility is important.The more instantly we can reach out to someone the closer we get. A friend who is closer to you as well as other friends and family can be easily accessed. Therefore, I chose Closeness centrality for finding the most important person in the friendship dataset. 
+
+Cowork: Pagerank Centrality 
+The PageRank centrality measures the authority of a node within the network. As the Pagerank score increase, the node gets more authority. Measuring Pagerank centrality helps us with identifying the most authoritative person among people that you “spent time together on at least one case, that you have been assigned to the same case, that they read or used your work product or that you have read or used their work product, including professional work done within the Firm like Bar association work, administration, etc”. 
+
+
+
+5.	For each of your chosen centrality measures, identify the lawyer(s) who have the highest value. Discuss why you think that person(s) is the most central in that network (use the attribute information we have about them. [2 points]
+
+```{r}
+
+V(advice)$Lawshool<- nodes[V(advice)== nodes$ID, c("LawSchool")]
+V(friendship)$Status<- nodes[V(friendship)== nodes$ID, c("Status")]
+V(cowork)$Practice<- nodes[V(cowork)== nodes$ID, c("Practice")]
+
+
+
+
+
+plot(advice, vertex.color=V(advice)$Lawshool, vertex.size=rescale(bet_advice, c(1,25)), edge.arrow.size=0.25, edge.width=0.5, vertex.label=advice$ID, layout=dlayout)
+legend("topright", legend=1:3, pch=19, col=categorical_pal(3)[c(1,2,3)])
+
+
+
+clo_friendship[clo_friendship==0.5] <- 0
+
+plot(friendship, vertex.color=V(friendship)$Status, vertex.size=rescale(clo_friendship, c(1, 15)), edge.arrow.size=0.25, edge.width=0.5, vertex.label=friendship$ID, layout=dlayout)
+legend("topright", legend=1:2, pch=19, col=categorical_pal(2)[c(1,2)])
+
+
+plot(cowork, vertex.color=V(cowork)$Practice, vertex.size=rescale(pr_cowork, c(1,20)), edge.arrow.size=0.25, edge.width=0.5, vertex.label= cowork$ID, layout=dlayout)
+legend("topright", legend=1:2, pch=19, col=categorical_pal(2)[c(1,2)])
+
+```
+
+```{r}
+
+
+```
+
+
+
+
+ID: The ID for each lawyer
+Status: (1 = partner (a more senior position); 2=associate (a more junior position))
+Gender: (1 = male; 2 = female)
+Office: (1 = Boston; 2 = Hartford; 3 = Providence)
+Seniority: number of years with the firm
+Age
+Practice: (1 = litigation; 2 = corporate)
+LawSchool: (1 = Harvard or Yale; 2 = University of Connecticut; 3 = Other)
+
+ID	Status	Gender	Office	Seniority	Age	Practice	LawSchool
+
+
+
+Lawyers with ID of 33, 8, 9, and 24 have the highest Betweenness centrality respectively which means they are very well connected with different groups within the network and have the greatest influence over the flow of information in the network.As we see they are all middle age male lawyers in a partner position and high seniority. Therefore, they are the most central among those whom I received advice from.
+
+Lawyers with ID of 56 and 57 have the highest Closeness centrality respecitively which means they are very connected with all other friends that I know and makes it easier for me to stay in touch with them or a Closeness centrality is a useful measure that estimates how fast the flow of information would be through a given node to other nodes. As they have been in a similar age, working in the same position (associate), and more importantly they went to the same university.In fact it is easier to get closer with someone in more junior position than those who are senior. Closeness centrality measures how short the shortest paths are from node i 
+
+Lawyers with ID of 8, 9, and 22 have the highest Pagerank centrality respectively which means they have been the more authoritative among those who that I have worked with. If we see their attributes, they are male in their fifties and forties who  have been working in this field more than half of their lives. Therefore, they are the most central in the network.

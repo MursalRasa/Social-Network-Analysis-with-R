@@ -1,0 +1,144 @@
+```{r}
+library(ergm)
+data("faux.dixon.high")
+detach(package:ergm)
+detach(package:network)
+require(intergraph) ## This package lets you port network objects between igraph and the statnet suite of packages (of which ergm is a part). It's not perfect, but it's very useful.
+require(igraph)
+dixon<-asIgraph(faux.dixon.high)
+```
+
+#1. Create two networks: one representing the jury vote and one representing the televote (i.e., the popular vote), with the count variable included as an edge attribute. Add the variables in the metadata file as node attributes. [We are providing you with code that accomplishes this, 0 points]
+
+```{r}
+meta <- read.csv("meta_eurovision.csv", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+
+euro_tele <- read.csv("euro_televoting_count_16-22.csv", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+
+euro_jury <- read.csv("euro_jury_count_16-22.csv", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+
+net_tele <- graph_from_data_frame(euro_tele, directed = TRUE)
+
+net_jury <- graph_from_data_frame(euro_jury, directed = TRUE)
+
+## creating a new dataframe to which we can append the metadata, appropriately aligned with the order of the nodes in the networks
+df <- data.frame(Country = V(net_tele)$name) 
+df <- merge(df, meta, by = "Country", sort = FALSE)
+
+## again creating the networks, this time adding all node attributes through the "vertices" element 
+net_tele <- graph_from_data_frame(euro_tele, vertices = df)
+net_jury <- graph_from_data_frame(euro_jury, vertices = df)
+head(net_tele)
+head(net_jury)
+```
+
+#2. Plot the televote and jury networks. Size edges based on the “count” variable. Size nodes by in-strength centrality (using strength(), and using the “count” edge attribute as your edge weight). Colour nodes using the Region variable. Position nodes based on the latitude and longitude of their capital cities (using layout = as.matrix(cbind(df$capital.lon, df$capital.lat)) when plotting). Make sure the plots are legible and informative. [1 point]
+```{r}
+
+
+
+plot(net_tele,
+     vertex.color = factor(V(net_tele)$Region),
+     vertex.label = NA,
+     layout = as.matrix(cbind(df$capital.lon, df$capital.lat)),
+     vertex.size = strength(net_tele),
+     edge.arrow.size = V(net_tele)$count,
+     edge.curved = 0.3,
+     main = "Televote Network")
+
+# Get the unique regions in the network
+unique_regions <- unique(factor(V(net_tele)$Region))
+
+# Generate the legend
+legend("topright",
+       legend = unique_regions,
+       pch = length(unique_regions),
+       col = categorical_pal(5)[as.integer(unique_regions)])
+
+
+plot(net_jury,
+     vertex.color = factor(V(net_jury)$Region),
+     vertex.label = NA,
+     layout = as.matrix(cbind(df$capital.lon, df$capital.lat)),
+     vertex.size = strength(net_jury),
+     edge.arrow.size = V(net_jury)$count,
+     edge.curved = 0.3,
+     main = "Jury Network")
+
+# Get the unique regions in the network
+unique_regions <- unique(factor(V(net_jury)$Region))
+
+# Generate the legend
+legend("topright",
+       legend = unique_regions,
+       pch = length(unique_regions),
+       col = categorical_pal(5)[as.integer(unique_regions)])
+
+```
+
+#3. Calculate the reciprocity and (global) transitivity of the televote and jury networks. Report the values in prose to show your understanding of each measure. How do the jury and televote networks compare? What do these measures suggest about voting patterns in Eurovision? [3 points]
+```{r}
+dyad.census(net_tele)
+reciprocity(net_tele)
+
+dyad.census(net_jury)
+reciprocity(net_jury)
+
+transitivity(net_tele)
+transitivity(net_jury)
+
+```
+Televote Network's reciprocity is 27.74566% and its transitivity 30,74671%
+Jury Network's reciprocity is 19.28934% and its transitivity 24.4186%
+
+The ratio of reciprocity between two nodes in a network expresses how interconnected they are. It is calculated as the percentage of node pairs that are connected in both directions.
+
+Contrarily, transitivity measures how closely two network nodes are linked by a shared third node. It is determined by taking into account the network's percentage of triangles.
+
+The Televote Network's reciprocity and transitivity, respectively, are 27.74566% and 30.74671% based on the figures provided. This shows that there are some mutual connections between Televote Network nodes and that third nodes are also a possible source of connections between the nodes. In contrast, the reciprocity and transitivity of the Jury Network are both lower at 19.28934% and 24.4186%, respectively. This implies that nodes in the Jury Network have less connections to one another and are less likely to be linked by third nodes.
+
+Thus, these measurements imply that the voting patterns on the Televote and Jury Networks differ. While the lower values in the Jury Network may represent a more broad variety of ideas, the higher reciprocity and transitivity in the Televote Network may indicate a greater sense of unanimity among voters.
+
+The Jury Network represents the communication and decision-making process among the national juries who vote on the performances during the Eurovision Song Contest. These juries consist of music industry professionals and enthusiasts from each participating country, who are tasked with evaluating and ranking the songs based on their artistic merit and overall performance. Unlike the Televote Network, which represents the direct voting by the general public across different countries, the Jury Network operates in a more controlled and centralized manner. The national juries typically consist of a small group of people who are selected by their respective broadcasters, and they have a limited time frame to watch and evaluate all the performances before submitting their votes.
+
+As a result, the nodes in the Jury Network may have less opportunity to interact with one another or establish connections beyond their assigned roles. Additionally, since the juries are selected by their broadcasters, there may be some variation in the level of expertise and musical taste among them, which could further limit the extent of mutual connections and third-party links between the nodes.
+
+
+#4. Do countries seem to prefer to award the top points to countries that are similar to them in any way? Calculate assortativity by region, per capita GDP, and population for the televote and jury networks. What do these results imply about countries’ song preferences? Do countries’ jury and public votes follow similar patterns? [3 points]
+
+```{r}
+assortativity.nominal(net_tele,factor(V(net_tele)$Region))
+assortativity.nominal(net_tele,V(net_tele)$GDP.per.capita)
+assortativity.nominal(net_tele,V(net_tele)$Population2010.OECD.estimate)
+
+assortativity.nominal(net_jury,factor(V(net_jury)$Region))
+assortativity.nominal(net_jury,V(net_jury)$GDP.per.capita)
+assortativity.nominal(net_jury,V(net_jury)$Population2010.OECD.estimate)
+
+```
+The assortativity of region, GDP per capita, and population in Televote Network are 0.2902639, -0.02535202, and -0.02535202 respectively.
+
+The assortativity of region, GDP per capita, and population in Jury Network are 0.04476184, -0.02577047, and -0.02577047 respectively. 
+
+Assortativity measures how frequently nodes in a network interact with other nodes that are conceptually similar to them. Though, when the assortativity coefficient is negativE the opposite is true. In the Eurovision Song Contest example, We can quantify how much a country favours other countries that are comparable to it in terms of geography, GDP per capita, and population.
+
+Countries in the same region are more likely to vote for each other, according to the Televote and Jury Networks' positive assortativity coefficients by region.The higher assortativity coefficient in the Televote Network suggests that countries tend to vote for other countries in the same region, which may reflect a cultural or linguistic affinity between them and may indicate that viewers tend to vote based on the quality of the song and the performance but also have a preference for countries that are culturally closer to them while juries are less influenced by cultural values and connections. 
+
+Corresponding to this, the negative assortativity coefficients by economic and demographic variables imply that countries with diverse levels of economic and demographic indicators are more likely to be associated.
+
+These results provide evidence for the existence of homophily in the Eurovision Song Contest and suggest that countries may be more likely to vote for other countries that are similar to them in some way. This may be due to shared cultural, linguistic, and historical ties that create a sense of affinity between countries in the same region.
+
+Countries with various degrees of economic development and population sizes are more likely to vote to each other, according to the negative assortativity coefficients for GDP per capita and population. This might be due to the fact that nations with larger populations and higher GDP per capita have more funds available to spend on public relations and performance, which might result in more votes. On the other hand, nations with smaller populations and lower GDP per capita may be viewed as underdogs and win more sympathy votes.
+
+Thus, these assortativity coefficients provide insight on the factors affecting voting behaviour in the Eurovision Song Contest and suggest that homophily has a role in the formation of voting blocs. It is worth noting that these coefficients only reflect correlations between variables; they are unable to prove causality or to explain the mechanisms underlying these patterns.
+
+
+#5. Consider our calculations of reciprocity, transitivity, and assortativity. What might these measures be missing or misrepresenting, either on the basis of how the calculations were done, or how the networks were constructed? If you identify any issues, what would you propose doing to resolve this? [3 points]
+
+There are some potential limitations with these metrics that must be taken into account, even though reciprocity, transitivity, and assortativity offer helpful insights on the organisation of the Eurovision Song Contest networks.
+
+The fact that these measurements are exclusively based on network topology and ignore other variables that may affect voting patterns, such as cultural or political relationships between nations, language hurdles, or strategic voting, is one of its limitations. For instance, despite of their economic or demographic similarities, nations may be more likely to vote for their neighbours or nations that speak a common language. Similar to this, nations may purposefully vote for nations that have a lower likelihood of winning in order to increase their own chances of winning.
+
+Moreover, these matrices assumes that all nodes have equal influence on the network and they are equally important. Though certain nodes might be more important or central than others, and their connections might have a greater impact on the topology of the network. In the Eurovision Song Contest, larger or more powerful countries may have a greater impact on global voting trends than do smaller or less powerful countries.
+
+In conclusion, further analyses that consider other factors that may affect voting patterns, like cultural or political ties, language difficulties, or strategic voting, could be done in order to address these limits and potential concerns. The most important or central nodes in the network might also be found and their connections' effects on the structure of the entire network could be examined by using centrality and structural or regular equivalency.     

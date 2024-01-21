@@ -1,0 +1,141 @@
+```{r}
+library(ergm)
+detach(package:ergm)
+detach(package:network)
+require(intergraph) 
+require(igraph)
+library(ape)
+```
+```{r}
+
+meta <- read.csv("meta_eurovision.csv", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+
+euro_sum <- read.csv("euro_sum_points.csv", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+
+
+net_sum <- graph_from_data_frame(euro_sum, directed = TRUE)
+
+## creating a new dataframe to which we can append the metadata, appropriately aligned with the order of the nodes in the networks
+df <- data.frame(Country = V(net_sum)$name) 
+df <- merge(df, meta, by = "Country", sort = FALSE)
+
+
+net_sum <- graph_from_data_frame(euro_sum, vertices = df)
+head(net_sum)
+```
+
+
+# 1. Create a network representing the total points awarded between countries from 1975 to 2022. Plot the resulting network. Size edges based on the "sum" variable. Size nodes by in-strength centrality (using strength(), and using the "sum" edge attribute as your edge weight). Colour nodes using the region variable. Position nodes based on the latitude and longitude of their capital cities. Make sure your plots are legible and informative.[1 point]
+
+```{r}
+library(Matrix)
+summary(net_sum)
+
+frlay <- layout_with_fr(net_sum) ## this will ensure that each time we plot the network, the location of the nodes stays constant
+plot(net_sum, 
+     edge.width = E(net_sum)$sum,
+     edge.curved=TRUE, 
+    vertex.label = V(net_sum)$ISO.alpha3.code,
+    vertex.label.cex = 0.5,
+     vertex.size = strength(net_sum)/4,
+     vertex.color = factor(V(net_sum)$Region),
+     layout = as.matrix(cbind(df$capital.lon, df$capital.lat)),
+    main = "Total points awarded between countries from 1975 to 2022"
+     )
+
+# Get the unique regions in the network
+unique_regions <- unique(factor(V(net_sum)$Region))
+
+# Generate the legend
+legend("topright",
+       legend = unique_regions,
+       pch = length(unique_regions),
+       col = categorical_pal(5)[as.integer(unique_regions)])
+
+```
+
+
+# 2. Calculate the reciprocity, (global) transitivity, and assortativity by region for the network. How do these values compare to what we saw with the Eurovision network from the last problem set? Why do they differ? Are these values informative and meaningful for this network? Justify your answer. [2 points]
+```{r}
+dyad.census(net_sum)
+reciprocity(net_sum)
+transitivity(net_sum)
+assortativity.nominal(net_sum,factor(V(net_sum)$Region))
+```
+
+# 3.Plot the 𝑘-core membership of the network using coreness(net, mode = "in") (i.e., considering incoming edges). What does this reveal about Eurovision participation? What seems to determine which countries are peripheral? [2 points]
+```{r}
+coreness(net_sum, mode = "in")
+
+
+plot(net_sum, 
+     vertex.color = coreness(net_sum, mode = "in"), 
+     edge.width = E(net_sum)$sum, 
+     edge.curved=TRUE, 
+    vertex.label = V(net_sum)$ISO.alpha3.code,
+    vertex.label.cex = 0.5,
+     vertex.size = strength(net_sum, mode = "in", weights = E(net_sum)$sum)/2,
+     vertex.label = NA,
+     layout = as.matrix(cbind(df$capital.lon, df$capital.lat)),
+    main = "K-Core Membership"
+     )
+
+# Get the unique regions in the network
+unique_regions <- unique(factor(V(net_sum)$Region))
+# Generate the legend
+legend("topright",
+       legend = unique_regions,
+       pch = length(unique_regions),
+       col = categorical_pal(6)[as.integer(unique_regions)])
+
+```
+A network subgraph known as a "k-core" has nodes that are all connected to other nodes in the subgraph via at least k different nodes. Finding the highest k value for which a subgraph can be taken out of the network is done using the k-core decomposition approach. A node's highest k value, which determines its coreness, is used as a unit of measurement. In other words, it counts the connections a node has to other nodes in the k-core subgraph in order to determine how central or significant it is to the network structure.
+
+We can see the distribution of coreness values among the nodes and determine countries in Norther Europe region belong to the highest k-core subgraphs by charting the network's k-core membership with coreness(net, mode = "in"). This can show participation trends and geographic concentrations of Northern Europe within the Eurovision network, as well as show which nations are less linked or distant from voting and contribution during the period of 1975 to 2022.
+
+Due to their increased connections to other regions in the k-core subgraphs, Norther Europe countries are expected to play a more central and significant role in the network structure. Regions with lower coreness values are probably more peripheral and less linked because they have fewer connections inside the k-core subgraphs.
+
+It may be said that the Northern European nations frequently vote for one another in the Eurovision contest, which is a type of bloc voting. The similarity in these nations' musical preferences can be linked to their shared cultural and linguistic heritage.
+
+
+# 4.Determine community membership in the network using the spinglass community detection algorithm, making sure to use edge weights. (To ensure that we all can get equivalent results, we need to effectively align our randomness. So, please include (and run) the line set.seed(654321) either at the start of your submission or just before you use the cluster_spinglass() function). Plot the network as done for Question 1 with nodes positioned by latitude and longitude of their capital city,  but now with nodes coloured by their community membership. [1 point]
+
+```{r}
+set.seed(654321)
+
+sg <- cluster_spinglass(net_sum, weights=E(net_sum)$sum)
+plot(sg, 
+     net_sum, 
+     edge.width = E(net_sum)$sum, 
+     vertex.size = strength(net_sum)/4,
+      vertex.label = V(net_sum)$ISO.alpha3.code,
+     vertex.label.cex = 0.5,
+     edge.curved = 0.3,
+     vertex.label = NA,
+     layout = as.matrix(cbind(df$capital.lon, df$capital.lat)),
+      main = "Community Membership"
+     )
+
+```
+
+
+# 5. Discuss the results of your analyses, with particular attention to the spinglass community memberships. Make sure to compare the spinglass community memberships with the regional groups. Do they seem to align? To help in your response, create a statnet version of the network and use the blockmodel function to report two block matrices, one showing the probability of ties within and between different regions, and one showing the probability of ties within and between the spinglass communities. Overall, how do you make sense of the communities we find? What might explain the groupings? What does this suggest about Eurovision and Europe over this period? [4 points]
+
+
+```{r}
+require(intergraph) 
+require(sna)
+
+
+blockmodel(snet, ec = as.integer(as.factor(snet %v% "Region")))
+
+blockmodel(snet, ec = as.integer(as.factor(sg$membership)))
+
+```
+
+The term spinglass community memberships describes a network's nodes that are closely connected to one another but less connected to nodes in other groups by optimising the modularity of a network partition.The modularity of a partition is computed by comparing the number of edges within communities to the expected number of edges within communities, where the expected number is computed under a null model that preserves the network's degree distribution. As the block model shows the Eurovision is divided into two communities or blocks. Each block include countries from different regions. This suggests that the spinglass communities may be capturing additional patterns beyond regional alignments, such as cultural or linguistic similarities.
+
+Regional groups, on the other hand, refer to the physical regions that a network's nodes are a part of. These regions could be any of the several nations or areas that make up Europe in the context of Eurovision which is 5 region such as Easter Europe, Southern Europe, Northern Europe, Western Europe, and Western Asia.
+
+In nutshell, the Eurovision network analysis's identification of spinglass communities suggests that there are unique groups of countries that are closely connected to one another, but these groups do not correspond to the conventional regional groups. This could have repercussions for how we interpret Eurovision and Europe during this time period and illuminate the nuanced interdependencies amongst the nations in different regions.
+

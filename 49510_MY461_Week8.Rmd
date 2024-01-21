@@ -1,0 +1,64 @@
+```{r}
+## Reading in the file
+# This is a tsv (tab separated value file), so need to specify sep='\t'.
+# The data also has some " characters which do not play nicely with the default file reading behaviour.
+# I specify quote="" to effectively treat them as normal characters.
+# I also specify column names.
+
+links <- read.table("clickstream-enwiki-2023-02.tsv", header=FALSE, sep='\t',
+                    quote="", col.names=c('Source', 'Target', 'Type', 'Weight')) 
+links <- links[links$Type == 'link',] # only consider direct hyperlinks
+head(links)
+
+```
+```{r}
+
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+require(igraph)
+
+```
+
+```{r}
+links_graph <- graph_from_data_frame(links, directed = TRUE)
+links_graph   
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+#1.	Plot the indegree and outdegree distributions as complementary cumulative distribution functions on a log-log scale. Plot the two distribution functions in two separate panels in the same figure. [1 point]
+```{r}
+```
+
+```{r}
+
+```
+
+```{r}
+
+
+```
+
+
+```{r}
+
+par(links = c(1, 2))
+plot(link_deg, indeg_ccdf, log = "xy", type = "l", 
+     xlab = "In-degree", ylab = "Complementary CDF")
+plot(degree(links, mode = "out"), outdeg_ccdf, log = "xy", type = "l", 
+     xlab = "Out-degree", ylab = "Complementary CDF")
+```
